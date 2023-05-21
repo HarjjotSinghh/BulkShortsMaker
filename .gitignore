@@ -6,4 +6,6 @@ things.xlsx
 general-facts.csv
 background_audio.mp3
 background_video.mp4
-/output/*
+/out/*
+/audio/*
+mulkshortsmaker-62ebde0e50a2.json

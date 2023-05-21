@@ -61,7 +61,9 @@ async def make_short(title : str, content: str, social_media_handle: str, filena
     video = video.without_audio()
     video_duration = 9
     video = video.subclip(0, video_duration)
-    audio = AudioFileClip("./background_audio.mp3")
+    
+    audio_clips = os.listdir("./audio")
+    audio = AudioFileClip("./audio/" + random.choice(audio_clips))
     video = video.set_audio(audio)
     video.set_duration(video_duration)
     video.resize(height=1280, width=720)
@@ -90,11 +92,9 @@ async def make_short(title : str, content: str, social_media_handle: str, filena
                             fontsize=40,
                             font="./fonts/Geomatrix Medium.ttf",
                             color="white",
-                            # stroke_color="black",
-                            # stroke_width=0.5,
                             align="center"
                         ).set_position((32, 0))\
-                         .set_start(7.82)
+                         .set_start(7.8)
 
     main_text.set_duration(video_duration)
 
@@ -105,8 +105,6 @@ async def make_short(title : str, content: str, social_media_handle: str, filena
                             fontsize=30,
                             font="./fonts/Geomatrix Medium.ttf", 
                             color="white",
-                            # stroke_color="black", 
-                            # stroke_width=0.5,
                             align="South",
                         )\
                 .set_position(("center", -150))
@@ -121,9 +119,9 @@ async def make_short(title : str, content: str, social_media_handle: str, filena
                                      .set_audio(audio) \
                                      .resize(height=1280, width=720)
 
-    video_with_text.write_videofile(f"./output/{filename}", codec="libx264", audio=True, bitrate='20000k')
+    video_with_text.write_videofile(f"./out/{filename}.mp4", codec="libx264", audio=True, bitrate='20000k')
     
-    shorts_vid = f"./output/{filename}"
+    shorts_vid = f"./out/{filename}"
     return shorts_vid
 
 
@@ -170,5 +168,5 @@ def extract_column(csv_file : str, column_index : int) -> list:
 if __name__ == "__main__":
     csv_file_path = "./general-facts.csv"
     column_index = 1
-    content_list = extract_column(csv_file=csv_file_path, column_index=column_index)[0:2]
+    content_list = extract_column(csv_file=csv_file_path, column_index=column_index)
     asyncio.run(make_bulk_shorts(title="Did You Know?", content_list=content_list, social_media_handle="factfinityy"))
