@@ -2,7 +2,7 @@ import asyncio
 import os
 import json
 import random
-from moviepy.editor import VideoFileClip, TextClip, AudioFileClip
+from moviepy.editor import VideoFileClip, TextClip, AudioFileClip, CompositeVideoClip
 import aiohttp
 
 
@@ -43,37 +43,87 @@ async def get_stock_video():
     return "background_video.mp4"
 
 
-async def make_short(vid : str, text : str, social_media_hande: str):
+async def make_short(title : str, content: str, social_media_handle: str):
     """
     Makes the short and saves it locally.
 
     Args:
-        vid (str): Path of the video file
-        text (str): Text to be put in the short
-        social_media_handle (str): Social media @ to be put in the short
+        title (str): The title of the Shorts/Reel
+        content (str): The content of the Shorts/Reel
+        social_media_handle (str): The social media handle of the account
 
     Returns:
-        str: Path of the Short generated
+        path (str): Path of the Short/Reel generated
     """
     
-    video = VideoFileClip(await get_stock_video())
-    font = "Codec Pro"
+    video = VideoFileClip(await get_stock_video()).resize(height=1280, width=720)
     video = video.without_audio()
-    video_duration = 9
+    video_duration = 1
     video = video.subclip(0, video_duration)
     audio = AudioFileClip("./background_audio.mp3")
     video = video.set_audio(audio)
-    heading_text = TextClip("Did You Know?", font=font, color="white", stroke_color="black", stroke_width=1)
-    heading_text.set_duration(0)
-    main_text = TextClip()
-    main_text.set_duration(7)
-    social_media_hande_text = TextClip("@factfinityy", font=font, color="white", stroke_color="black", stroke_width=1)
-    social_media_hande_text.set_duration(0)
+    video.set_duration(video_duration)
+    video.resize(height=1280, width=720)
+    # print(video.size)
+    video_width, video_hieght = video.size
+    margin = 100
+    
+    heading_text = \
+                TextClip(f"Did You Know?",
+                            method="caption",
+                            size = (video_width, video_hieght),
+                            fontsize=85, 
+                            font="./fonts/Geomatrix Bold.ttf", 
+                            color="white", 
+                            stroke_color="black", 
+                            stroke_width=2,
+                            align="North"
+                        ).set_position(("center", 350))
+    heading_text.set_duration(video_duration)
+    
+    main_text = \
+                TextClip(f"The concept of time, although universally experienced, can be subjective and varies across different cultures, influenced by social, historical, and geographical factors.",
+                            method="caption",
+                            size = (video_width, video_hieght),
+                            fontsize=40,
+                            font="./fonts/Geomatrix Medium.ttf",
+                            color="white",
+                            stroke_color="black",
+                            stroke_width=1,
+                            align="center"
+                        )
+    main_text.set_duration(video_duration)
+
+    social_media_hande_text = \
+                TextClip(f"Follow for more\n@factfinityy",
+                            method="caption",
+                            size = (video_width, video_hieght),
+                            fontsize=30,
+                            font="./fonts/Geomatrix Medium.ttf", 
+                            color="white", 
+                            stroke_color="black", 
+                            stroke_width=1,
+                            align="South",
+                        )\
+                .set_position(("center", -350))
+    social_media_hande_text.set_duration(video_duration)
+
+    video_with_text = CompositeVideoClip([video,
+                                          heading_text,
+                                          main_text,
+                                          social_media_hande_text
+                                        ])
+    video_with_text = video_with_text.set_duration(video_duration) \
+                                     .set_audio(audio) \
+                                     .resize(height=1280, width=720)
+
+    
+    video_with_text.write_videofile("shorts_video.mp4", codec="libx264", audio=True, bitrate='20000k')
     
     shorts_vid = ""
     return shorts_vid
 
 
 if __name__ == "__main__":
-    asyncio.run(get_stock_video())
+    asyncio.run(make_short())
     
