@@ -1,8 +1,9 @@
 import asyncio
+import csv
 import os
 import json
 import random
-from moviepy.editor import VideoFileClip, TextClip, AudioFileClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, TextClip, AudioFileClip, CompositeVideoClip, ColorClip
 import aiohttp
 
 
@@ -43,7 +44,7 @@ async def get_stock_video():
     return "background_video.mp4"
 
 
-async def make_short(title : str, content: str, social_media_handle: str):
+async def make_short(title : str, content: str, social_media_handle: str, filename : str):
     """
     Makes the short and saves it locally.
 
@@ -51,79 +52,123 @@ async def make_short(title : str, content: str, social_media_handle: str):
         title (str): The title of the Shorts/Reel
         content (str): The content of the Shorts/Reel
         social_media_handle (str): The social media handle of the account
-
+        filename (str): The name of the file which will get saved
     Returns:
         path (str): Path of the Short/Reel generated
     """
     
     video = VideoFileClip(await get_stock_video()).resize(height=1280, width=720)
     video = video.without_audio()
-    video_duration = 1
+    video_duration = 9
     video = video.subclip(0, video_duration)
     audio = AudioFileClip("./background_audio.mp3")
     video = video.set_audio(audio)
     video.set_duration(video_duration)
     video.resize(height=1280, width=720)
-    # print(video.size)
     video_width, video_hieght = video.size
-    margin = 100
     
     heading_text = \
-                TextClip(f"Did You Know?",
+                TextClip(title,
                             method="caption",
-                            size = (video_width, video_hieght),
+                            size = (video_width/1.1, video_hieght/1.1),
                             fontsize=85, 
                             font="./fonts/Geomatrix Bold.ttf", 
                             color="white", 
-                            stroke_color="black", 
-                            stroke_width=2,
-                            align="North"
-                        ).set_position(("center", 350))
+                            align="North",
+                            stroke_color="black",
+                            stroke_width=1
+                        ).set_position((32, 350))
     heading_text.set_duration(video_duration)
+    heading_text.on_color(color = [0,0,0], col_opacity = 0.2, size=(heading_text.w, heading_text.h))
+    background_clip = ColorClip(size=(video_width, video_hieght), color=[0,0,0], ismask=False).set_opacity(0.3)
+    heading_text = CompositeVideoClip([background_clip, heading_text])
     
     main_text = \
-                TextClip(f"The concept of time, although universally experienced, can be subjective and varies across different cultures, influenced by social, historical, and geographical factors.",
+                TextClip(content,
                             method="caption",
-                            size = (video_width, video_hieght),
+                            size = (video_width/1.1, video_hieght/1.1),
                             fontsize=40,
                             font="./fonts/Geomatrix Medium.ttf",
                             color="white",
-                            stroke_color="black",
-                            stroke_width=1,
+                            # stroke_color="black",
+                            # stroke_width=0.5,
                             align="center"
-                        )
+                        ).set_position((32, 0))\
+                         .set_start(7.82)
+
     main_text.set_duration(video_duration)
 
-    social_media_hande_text = \
-                TextClip(f"Follow for more\n@factfinityy",
+    social_media_handle_text = \
+                TextClip(f"Follow For More\n@{social_media_handle}",
                             method="caption",
-                            size = (video_width, video_hieght),
+                            size = (video_width/1.1, video_hieght/1.1),
                             fontsize=30,
                             font="./fonts/Geomatrix Medium.ttf", 
-                            color="white", 
-                            stroke_color="black", 
-                            stroke_width=1,
+                            color="white",
+                            # stroke_color="black", 
+                            # stroke_width=0.5,
                             align="South",
                         )\
-                .set_position(("center", -350))
-    social_media_hande_text.set_duration(video_duration)
+                .set_position(("center", -150))
+    social_media_handle_text.set_duration(video_duration)
 
     video_with_text = CompositeVideoClip([video,
                                           heading_text,
                                           main_text,
-                                          social_media_hande_text
+                                          social_media_handle_text
                                         ])
     video_with_text = video_with_text.set_duration(video_duration) \
                                      .set_audio(audio) \
                                      .resize(height=1280, width=720)
 
+    video_with_text.write_videofile(f"./output/{filename}", codec="libx264", audio=True, bitrate='20000k')
     
-    video_with_text.write_videofile("shorts_video.mp4", codec="libx264", audio=True, bitrate='20000k')
-    
-    shorts_vid = ""
+    shorts_vid = f"./output/{filename}"
     return shorts_vid
 
 
-if __name__ == "__main__":
-    asyncio.run(make_short())
+async def make_bulk_shorts(title : str, content_list: list, social_media_handle: str) -> None:
+    """
+    Creates bulk Shorts/Reels and saves them locally
+
+    Args:
+        title (str): The title of the Shorts/Reel
+        content_list (list): The content of the Shorts/Reel
+        social_media_handle (str): The social media handle of the account
+    """
     
+    for i in range(len(content_list)):
+        await make_short(title=title, content=content_list[i],social_media_handle=social_media_handle, filename=f"{i+1}.mp4")
+        print(f"Successfully generated Short/Reel #{i+1}.")
+    
+    print(f"Successfully generated all Shorts/Reels ({len(content_list)}).")
+
+
+def extract_column(csv_file : str, column_index : int) -> list:
+    """
+    Extracts the entire column of a csv file and returns a list.
+
+    Args:
+        csv_file (str): Path of the csv file
+        column_index (int): Index of the column, which is to be extracted
+
+    Returns:
+        list: The list of all the items which were in the column.
+    """
+    
+    result = []
+    
+    with open(csv_file, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if len(row) > column_index:
+                result.append(row[column_index])
+
+    return result
+
+
+if __name__ == "__main__":
+    csv_file_path = "./general-facts.csv"
+    column_index = 1
+    content_list = extract_column(csv_file=csv_file_path, column_index=column_index)[0:2]
+    asyncio.run(make_bulk_shorts(title="Did You Know?", content_list=content_list, social_media_handle="factfinityy"))
